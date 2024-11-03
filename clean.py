@@ -18,6 +18,7 @@ import warnings
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="sklearn.cluster._kmeans")
 data_dir = ""
+#Output Size
 std=70
 
 def dict_to_dataloader(data_by_label, batch_size):
@@ -111,8 +112,8 @@ losses = []
 
 data_transforms = {
     'train': transforms.Compose([
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
@@ -123,8 +124,8 @@ data_transforms = {
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
     'result':transforms.Compose([
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
@@ -145,9 +146,9 @@ if 1:
     img_transformer=transforms.ToPILImage()
     ts_transformer=transforms.ToTensor()
     
-    tmp_dir=os.path.join(data_dir, "output")
-    data_dir="LTOrg"
-    output_dir=os.path.join(data_dir,'cleanedCRA')
+    data_dir="./data/CMG_ORG"
+    std=70
+    output_dir="./data/CMG"
     image_datasets = {
     'train': datasets.ImageFolder(os.path.join(data_dir, 'train'), data_transforms['train']),
     'add': datasets.ImageFolder(os.path.join(data_dir, 'result'),, data_transforms['result']),
@@ -203,17 +204,13 @@ if 1:
         add_running_loss = 0.0
         for x in ['train']:
             d=image_datasets[x]
-            # 生成一个随机的索引序列
             perm = torch.randperm(len(d))
-            # 使用这个索引序列来创建一个Subset
             image_datasets[x] = Subset(d, perm.tolist())
         for x in ['add']:
             d=image_datasets[x]
-            # 生成一个随机的索引序列
             perm = torch.randperm(len(d))
             rang=list(range(len(d)))
             pos_dict=dict(zip(perm.tolist(),rang))
-            # 使用这个索引序列来创建一个Subset
             image_datasets[x] = Subset(d, perm.tolist())
             # print(drop_idxs)
             drop_idxs = [pos_dict[idx] for idx in drop_idxs]
@@ -311,7 +308,7 @@ if 1:
                 # sample = sample.unsqueeze(0)
                 if cnt_dict[label]<20:
                     feature = extract_features([sample], model, device)
-                    # scaled_generated_feature = scaler.transform(feature)
+                    feature = scaler.transform(feature)
                     feature=feature-means[label]
                     if (sigma[label]>0).all():
                         feature=feature/sigma[label]
@@ -327,6 +324,7 @@ if 1:
                     to_drop_dis.append(min_dis)
                 else:
                     feature = extract_features([sample], model, device)
+                    feature = scaler.transform(feature)
                     lower_bound=means[label]-3*sigma[label]
                     upper_bound=means[label]+3*sigma[label]
                     to_drop=((lower_bound > feature) | (feature > upper_bound))
@@ -347,27 +345,29 @@ if 1:
             sr=len(s3_drop_idxs)/(len(to_drop_idxs)+len(s3_drop_idxs))
             # print(to_drop_zip)
             # print(to_drop_idxs)
-            for i in range(int(len(to_drop_idxs)*drop_rank*nsr/10)):
+            for i in range(int(len(to_drop_idxs))):
                 # p=np.random.rand()
                 # if p<drop_mut:
                 #     continue
                 # print(1)
-                sample, label=image_datasets['add'][to_drop_idxs[i]]
-                if drop_threshold[label.item()]:
-                    drop_idxs.append(to_drop_idxs[i])
-                    drop_threshold[label.item()]-=1
-                    droped[label.item()]=droped.get(label.item(),0)+1
-                    cnt_midict[label.item()]-=0.5
-            for i in range(int(len(s3_drop_idxs)*drop_rank*sr/10)):
+                if to_drop_dict[to_drop_idxs[i]]>5:
+                    sample, label=image_datasets['add'][to_drop_idxs[i]]
+                    if drop_threshold[label.item()]:
+                        drop_idxs.append(to_drop_idxs[i])
+                        drop_threshold[label.item()]-=1
+                        droped[label.item()]=droped.get(label.item(),0)+1
+                        cnt_midict[label.item()]-=0.5
+            for i in range(int(len(s3_drop_idxs))):
                 # p=np.random.rand()
                 # if p<drop_mut:
                 #     continue
-                sample, label=image_datasets['add'][s3_drop_idxs[i]]
-                if drop_threshold[label.item()]:
-                    drop_idxs.append(s3_drop_idxs[i])
-                    drop_threshold[label.item()]-=1
-                    droped[label.item()]=droped.get(label.item(),0)+1
-                    cnt_midict[label.item()]-=0.5
+                if s3_drop_dict[s3_drop_idxs[i]]>0.7:
+                    sample, label=image_datasets['add'][s3_drop_idxs[i]]
+                    if drop_threshold[label]:
+                        drop_idxs.append(s3_drop_idxs[i])
+                        drop_threshold[label]-=1
+                        droped[label]=droped.get(label,0)+1
+                        cnt_midict[label]-=0.5
     print("Clean End")
     
     selected_idxs=list(range(len(image_datasets['add'])))
@@ -379,7 +379,7 @@ if 1:
         for i in range(len(inputs)):
             print(1,end='')
             clsidx=labels[i].item()
-            if cnt_dict[clsidx]<70:
+            if cnt_dict[clsidx]<std:
                 cnt_dict[clsidx]+=1
             else:
                 continue

@@ -1,4 +1,4 @@
-name: hbl-DS
+name: DS
 channels:
   - pytorch
   - nvidia
@@ -629,4 +629,4 @@ dependencies:
       - wandb==0.15.8
       - wcwidth==0.2.13
       - wilds==2.0.0
-prefix: /home/ubuntu/anaconda3/envs/hbl-DS
+prefix: /home/ubuntu/anaconda3/envs/DS

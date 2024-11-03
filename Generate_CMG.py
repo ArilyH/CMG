@@ -1,12 +1,10 @@
-# Code from https://github.com/huggingface/notebooks/blob/main/diffusers/sd_textual_inversion_training.ipynb is used
-# Origin：Hugging Face
-# Apache License 2.0
 import argparse
 import itertools
 import math
 import os
 import random
 
+import shutil
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -34,9 +32,220 @@ from huggingface_hub import create_repo
 from diffusers import DPMSolverMultistepScheduler
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES=True
+# os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+#Your Generative Model Path
+pretrained_model_name_or_path = "./models--stabilityai--stable-diffusion-2/snapshot/1e128c8891e52218b74cde8f26dbfc701cb99d79" 
+
+new_label = {
+    'whiptail, whiptail lizard': 'Cnemidophorus murinus',
+    'nematode, nematode worm, roundworm': 'Nematoda',
+    'loggerhead, loggerhead turtle, Caretta caretta': 'Caretta caretta',
+    'scorpion': 'Scorpio',
+    'vine snake': 'Oxybelis fulgidus',
+    'hermit crab': 'Pagurus',
+    'wallaby, brush kangaroo': 'Notamacropus',
+    'tiger shark, Galeocerdo cuvieri': 'Galeocerdo cuvier',
+    'axolotl, mud puppy, Ambystoma mexicanum': 'Ambystoma mexicanum',
+    'sea snake': 'Hydrophiidae',
+    'black swan, Cygnus atratus': 'Cygnus atratus',
+    'stingray': 'Dasyatis',
+    'thunder snake, worm snake, Carphophis amoenus': 'Carphophis amoenus',
+    'pelican': 'Pelecanus',
+    'leatherback turtle, leatherback, leathery turtle, Dermochelys coriacea': 'Dermochelys coriacea',
+    'spotted salamander, Ambystoma maculatum': 'Ambystoma maculatum',
+    'great white shark, white shark, man-eater, man-eating shark, Carcharodon carcharias': 'Carcharodon carcharias',
+    'crayfish, crawfish, crawdad, crawdaddy': 'Cambarus',
+    'bald eagle, American eagle, Haliaeetus leucocephalus': 'Haliaeetus leucocephalus',
+    'hen': 'Gallus gallus domesticus',
+    'peacock': 'Pavo cristatus',
+    'great grey owl, great gray owl, Strix nebulosa': 'Strix nebulosa',
+    'wombat': 'Vombatus ursinus',
+    'sulphur-crested cockatoo, Kakatoe galerita, Cacatua galerita': 'Cacatua galerita',
+    'mud turtle': 'Kinosternon',
+    'spoonbill': 'Platalea',
+    'hornbill': 'Buceros',
+    'bittern': 'Botaurus',
+    'night snake, Hypsiglena torquata': 'Hypsiglena torquata',
+    'sea lion': 'Zalophus',
+    'cock': 'Gallus gallus',
+    'barn spider, Araneus cavaticus': 'Araneus cavaticus',
+    'electric ray, crampfish, numbfish, torpedo': 'Torpedo',
+    'red-backed sandpiper, dunlin, Erolia alpina': 'Calidris alpina',
+    'chickadee': 'Poecile',
+    'macaw': 'Ara',
+    'common newt, Triturus vulgaris': 'Triturus vulgaris',
+    'bulbul': 'Pycnonotus',
+    'kite': 'Milvus',
+    'tench, Tinca tinca': 'Tinca tinca',
+    'prairie chicken, prairie grouse, prairie fowl': 'Tympanuchus',
+    'hummingbird': 'Trochilidae',
+    'rock crab, Cancer irroratus': 'Cancer irroratus',
+    'Komodo dragon, Komodo lizard, dragon lizard, giant lizard, Varanus komodoensis': 'Varanus komodoensis',
+    'black and gold garden spider, Argiope aurantia': 'Argiope aurantia',
+    'harvestman, daddy longlegs, Phalangium opilio': 'Phalangium opilio',
+    'chiton, coat-of-mail shell, sea cradle, polyplacophore': 'Polyplacophora',
+    'limpkin, Aramus pictus': 'Aramus guarauna',
+    'white stork, Ciconia ciconia': 'Ciconia ciconia',
+    'sea slug, nudibranch': 'Nudibranchia',
+    'goldfinch, Carduelis carduelis': 'Carduelis carduelis',
+    'tick': 'Ixodida',
+    'tmp': 'tmp',
+    'sea anemone, anemone': 'Actiniaria',
+    'king snake, kingsnake': 'Lampropeltis',
+    'black grouse': 'Lyrurus tetrix',
+    'garter snake, grass snake': 'Thamnophis',
+    'toucan': 'Ramphastos',
+    'wolf spider, hunting spider': 'Lycosidae',
+    'goose': 'Anser',
+    'drake': 'Anas platyrhynchos',
+    'American alligator, Alligator mississipiensis': 'Alligator mississippiensis',
+    'tarantula': 'Theraphosidae',
+    'lorikeet': 'Trichoglossus',
+    'banded gecko': 'Coleonyx variegatus',
+    'jellyfish': 'Scyphozoa',
+    'spiny lobster, langouste, rock lobster, crawfish, crayfish, sea crawfish': 'Palinuridae',
+    'bee eater': 'Meropidae',
+    'bustard': 'Otididae',
+    'magpie': 'Pica',
+    'flatworm, platyhelminth': 'Platyhelminthes',
+    'garden spider, Aranea diademata': 'Araneus diadematus',
+    'coucal': 'Centropus',
+    'hammerhead, hammerhead shark': 'Sphyrnidae',
+    'tailed frog, bell toad, ribbed toad, tailed toad, Ascaphus trui': 'Ascaphus',
+    'boa constrictor, Constrictor constrictor': 'Boa constrictor',
+    'flamingo': 'Phoenicopterus',
+    'terrapin': 'Malaclemys',
+    'oystercatcher, oyster catcher': 'Haematopus',
+    'albatross, mollymawk': 'Diomedeidae',
+    'common iguana, iguana, Iguana iguana': 'Iguana iguana',
+    'ptarmigan': 'Lagopus',
+    'American coot, marsh hen, mud hen, water hen, Fulica americana': 'Fulica americana',
+    'goldfish, Carassius auratus': 'Carassius auratus',
+    'crane': 'Gruidae',
+    'diamondback, diamondback rattlesnake, Crotalus adamanteus': 'Crotalus adamanteus',
+    'green lizard, Lacerta viridis': 'Lacerta viridis',
+    'conch': 'Strombus',
+    'chambered nautilus, pearly nautilus, nautilus': 'Nautilus',
+    'indigo bunting, indigo finch, indigo bird, Passerina cyanea': 'Passerina cyanea',
+    'agama': 'Agama',
+    'hognose snake, puff adder, sand viper': 'Heterodon',
+    'water ouzel, dipper': 'Cinclus',
+    'redshank, Tringa totanus': 'Tringa totanus',
+    'sidewinder, horned rattlesnake, Crotalus cerastes': 'Crotalus cerastes',
+    'Dungeness crab, Cancer magister': 'Metacarcinus magister',
+    'green snake, grass snake': 'Opheodrys',
+    'green mamba': 'Dendroaspis viridis',
+    'horned viper, cerastes, sand viper, horned asp, Cerastes cornutus': 'Cerastes cerastes',
+    'black widow, Latrodectus mactans': 'Latrodectus mactans',
+    'snail': 'Gastropoda'
+}
+
+origin_concept = {
+    'whiptail, whiptail lizard': 'whiptail lizard',
+    'nematode, nematode worm, roundworm': 'nematode worm',
+    'loggerhead, loggerhead turtle, Caretta caretta': 'loggerhead turtle',
+    'scorpion': 'scorpion',
+    'vine snake': 'vine snake',
+    'hermit crab': 'hermit crab',
+    'wallaby, brush kangaroo': 'brush kangaroo',
+    'tiger shark, Galeocerdo cuvieri': 'tiger shark',
+    'axolotl, mud puppy, Ambystoma mexicanum': 'axolotl',
+    'sea snake': 'sea snake',
+    'black swan, Cygnus atratus': 'black swan',
+    'stingray': 'stingray',
+    'thunder snake, worm snake, Carphophis amoenus': 'worm snake',
+    'pelican': 'pelican',
+    'leatherback turtle, leatherback, leathery turtle, Dermochelys coriacea': 'leatherback turtle',
+    'spotted salamander, Ambystoma maculatum': 'spotted salamander',
+    'great white shark, white shark, man-eater, man-eating shark, Carcharodon carcharias': 'great white shark',
+    'crayfish, crawfish, crawdad, crawdaddy': 'crayfish',
+    'bald eagle, American eagle, Haliaeetus leucocephalus': 'bald eagle',
+    'hen': 'hen',
+    'peacock': 'peacock',
+    'great grey owl, great gray owl, Strix nebulosa': 'great grey owl',
+    'wombat': 'wombat',
+    'sulphur-crested cockatoo, Kakatoe galerita, Cacatua galerita': 'sulphur-crested cockatoo',
+    'mud turtle': 'mud turtle',
+    'spoonbill': 'spoonbill',
+    'hornbill': 'hornbill',
+    'bittern': 'bittern',
+    'night snake, Hypsiglena torquata': 'night snake',
+    'sea lion': 'sea lion',
+    'cock': 'cock',
+    'barn spider, Araneus cavaticus': 'barn spider',
+    'electric ray, crampfish, numbfish, torpedo': 'electric ray',
+    'red-backed sandpiper, dunlin, Erolia alpina': 'red-backed sandpiper',
+    'chickadee': 'chickadee',
+    'macaw': 'macaw',
+    'common newt, Triturus vulgaris': 'common newt',
+    'bulbul': 'bulbul',
+    'kite': 'kite',
+    'tench, Tinca tinca': 'tench',
+    'prairie chicken, prairie grouse, prairie fowl': 'prairie chicken',
+    'hummingbird': 'hummingbird',
+    'rock crab, Cancer irroratus': 'rock crab',
+    'Komodo dragon, Komodo lizard, dragon lizard, giant lizard, Varanus komodoensis': 'Komodo dragon',
+    'black and gold garden spider, Argiope aurantia': 'black and gold garden spider',
+    'harvestman, daddy longlegs, Phalangium opilio': 'daddy longlegs',
+    'chiton, coat-of-mail shell, sea cradle, polyplacophore': 'coat-of-mail shell',
+    'limpkin, Aramus pictus': 'limpkin',
+    'white stork, Ciconia ciconia': 'white stork',
+    'sea slug, nudibranch': 'sea slug',
+    'goldfinch, Carduelis carduelis': 'goldfinch',
+    'tick': 'tick',
+    'tmp': 'tmp',
+    'sea anemone, anemone': 'sea anemone',
+    'king snake, kingsnake': 'king snake',
+    'black grouse': 'black grouse',
+    'garter snake, grass snake': 'garter snake',
+    'toucan': 'toucan',
+    'wolf spider, hunting spider': 'wolf spider',
+    'goose': 'goose',
+    'drake': 'drake',
+    'American alligator, Alligator mississipiensis': 'American alligator',
+    'tarantula': 'tarantula',
+    'lorikeet': 'lorikeet',
+    'banded gecko': 'banded gecko',
+    'jellyfish': 'jellyfish',
+    'spiny lobster, langouste, rock lobster, crawfish, crayfish, sea crawfish': 'spiny lobster',
+    'bee eater': 'bee eater',
+    'bustard': 'bustard',
+    'magpie': 'magpie',
+    'flatworm, platyhelminth': 'flatworm',
+    'garden spider, Aranea diademata': 'garden spider',
+    'coucal': 'coucal',
+    'hammerhead, hammerhead shark': 'hammerhead shark',
+    'tailed frog, bell toad, ribbed toad, tailed toad, Ascaphus trui': 'tailed frog',
+    'boa constrictor, Constrictor constrictor': 'boa constrictor',
+    'flamingo': 'flamingo',
+    'terrapin': 'terrapin',
+    'oystercatcher, oyster catcher': 'oystercatcher',
+    'albatross, mollymawk': 'albatross',
+    'common iguana, iguana, Iguana iguana': 'common iguana',
+    'ptarmigan': 'ptarmigan',
+    'American coot, marsh hen, mud hen, water hen, Fulica americana': 'American coot',
+    'goldfish, Carassius auratus': 'goldfish',
+    'crane': 'crane',
+    'diamondback, diamondback rattlesnake, Crotalus adamanteus': 'diamondback rattlesnake',
+    'green lizard, Lacerta viridis': 'green lizard',
+    'conch': 'conch',
+    'chambered nautilus, pearly nautilus, nautilus': 'chambered nautilus',
+    'indigo bunting, indigo finch, indigo bird, Passerina cyanea': 'indigo bunting',
+    'agama': 'agama',
+    'hognose snake, puff adder, sand viper': 'hognose snake',
+    'water ouzel, dipper': 'water ouzel',
+    'redshank, Tringa totanus': 'redshank',
+    'sidewinder, horned rattlesnake, Crotalus cerastes': 'sidewinder',
+    'Dungeness crab, Cancer magister': 'Dungeness crab',
+    'green snake, grass snake': 'green snake',
+    'green mamba': 'green mamba',
+    'horned viper, cerastes, sand viper, horned asp, Cerastes cornutus': 'horned viper',
+    'black widow, Latrodectus mactans': 'black widow',
+    'snail': 'snail'
+}
 
 
-pretrained_model_name_or_path = "stabilityai/stable-diffusion-2"
+
 #@title Setup the prompt templates for training 
 imagenet_templates_small = [
     "a photo of a {}",
@@ -385,14 +594,16 @@ if __name__== '__main__':
 
     args = parser.parse_args()
     images_path = args.dataset_path #@param {type:"string"}
-    std_cnt=args.std
+    std_cnt=int(args.std)
     domain=args.domain
     while not os.path.exists(str(images_path)):
         print('The images_path specified does not exist, use the colab file explorer to copy the path :')
-        exit(0)
+        images_path=input("")
     data_paths=getAllChildren(images_path)
     print(data_paths)
     for save_path in data_paths: 
+        if os.path.isdir(save_path+"/result"):
+            shutil.rmtree(save_path+"/result")
         images = []
         cnt=0
         for file_path in os.listdir(save_path):
@@ -406,18 +617,21 @@ if __name__== '__main__':
         image_grid(images, 1, len(images))
         print("Successfully load the images")
         print(len(images))
-        concept=save_path.split("/")[-1]
-        print(concept)
-        concept=concept.strip(",")[0]
-        if len(concept.strip())>1:
-            concept=concept.strip[" "][1]
+        oriconcept=save_path.split("/")[-3]
+        # concept=concept.split(",")[-1]
+        concept=new_label[oriconcept]
+        concept="label_1"
+        print(oriconcept)
+        # domain=save_path.split("/")[-2]
+        # if "_" in concept:
+        #     concept=concept.split("_")[1]
+        # print(domain," ",concept)
+        domain=args.domain
 
         #@title Settings for your newly created concept
         #@markdown `what_to_teach`: what is it that you are teaching? `object` enables you to teach the model a new object to be used, `style` allows you to teach the model a new style one can use.
         what_to_teach = "object" #@param ["object", "style"]
         #@markdown `placeholder_token` is the token you are going to use to represent your new concept (so when you prompt the model, you will say "A `<my-placeholder-token>` in an amusement park"). We use angle brackets to differentiate a token from other words/tokens, to avoid collision.
-        #@markdown `initializer_token` is a word that can summarise what your new concept is, to be used as a starting point
-
         placeholder_token = "<"+domain+"-"+concept+">" 
         initializer_token = concept
 
@@ -438,6 +652,12 @@ if __name__== '__main__':
         #@title Get token ids for our placeholder and initializer token. This code block will complain if initializer string is not a single token
         # Convert the initializer_token, placeholder_token to ids
         token_ids = tokenizer.encode(initializer_token, add_special_tokens=False)
+        # Check if initializer_token is a single token or a sequence of tokens
+        #if len(token_ids) > 1:
+            #print(initializer_token+": The initializer token must be a single token.")
+            #continue
+            #raise ValueError("The initializer token must be a single token.")
+
         initializer_token_id = token_ids[0]
         placeholder_token_id = tokenizer.convert_tokens_to_ids(placeholder_token)
 
@@ -487,10 +707,11 @@ if __name__== '__main__':
             os.makedirs(save_path+"/result")
             save_path+="/result"
         else:
-            while os.path.isdir(save_path+"/result"):
-                rescnt+=1
-            os.makedirs(save_path+"/result"+str(rescnt))
-            save_path+="/result"+str(rescnt)
+            shutil.rmtree(save_path+"/result")
+            # while os.path.isdir(save_path+"/result"):
+            #     rescnt+=1
+            # os.makedirs(save_path+"/result"+str(rescnt))
+            # save_path+="/result"+str(rescnt)
 
 
         logger = get_logger(__name__)
@@ -506,7 +727,7 @@ if __name__== '__main__':
         
         pipe = StableDiffusionPipeline.from_pretrained(
             hyperparameters["output_dir"],
-            scheduler=DPMSolverMultistepScheduler.from_pretrained(hyperparameters["output_dir"], subfolder="scheduler"),
+            scheduler=DPMSolverMultistepScheduler.from_pretrained(pretrained_model_name_or_path, subfolder="scheduler"),
             torch_dtype=torch.float16,
             local_files_only = True
         ).to("cuda")
@@ -551,16 +772,38 @@ if __name__== '__main__':
         "Shedding",
         "Partial Bloom"
         ]
-        
-        empty_scenarios=[]
 
+        animal_scenarios = [
+        "In the grass",
+        "In the forest",
+        "By the river",
+        "On a mountaintop",
+        "In the desert",
+        "In the jungle",
+        "On the ocean shore",
+        "In a cave",
+        "Amidst snow-covered peaks",
+        "In a bustling city",
+        "In a tranquil meadow"
+        ""
+        ]
+
+
+        # animal_scenarios=[""]
+        placeholder_token = "<"+domain+"-"+new_label[oriconcept]+", a kind of "+origin_concept[oriconcept]+">" 
+        initializer_token = origin_concept[oriconcept]
+        
         prompt= "a photo of "+placeholder_token
+        print(prompt)
         
         # prompts=[prompt+" "+i for i in food_scenarios]
         if domain=='flower':
             prompts=[prompt+" which is "+i for i in flowers_scenarios]
         elif domain=='food':
             prompts=[prompt+" "+i for i in food_scenarios]
+        elif domain=='animal':
+            prompts=[prompt+" "+i for i in animal_scenarios]
+
 
         num_samples = 10 #@param {type:"number"}
         num_rows = 1 #@param {type:"number"}

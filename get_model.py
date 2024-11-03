@@ -136,4 +136,4 @@ if 1:
     print(f"few: {phase_acc['few']} \n medium: {phase_acc['medium']}\n  many: {phase_acc['many']}")
     if not os.path.isdir("./models"):
         os.makedirs("./models",exist_ok=True)
-    torch.save(model, 'models/resnet50_flw17.pth')
+    torch.save(model, 'models/resnet50.pth')

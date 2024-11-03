@@ -10,7 +10,7 @@ parser.add_argument('-seed_num', type=int, default=100)
 args = parser.parse_args()
 
 parent_dir=os.getcwd()
-output_dir=os.path.join(parent_dir,'seeds')
+output_dir=os.path.join(parent_dir,'class_data_adv/')
 output_dir=os.path.join(output_dir,args.dataset)
 input_dir=args.data_dir
 

@@ -16,8 +16,6 @@ import torch.nn.functional as F
 from torch.optim import lr_scheduler
 from torchvision.transforms import functional
 import time
-import argparse
-
 def AnyRand(low,high):
     res=np.random.rand()
     times=high-low
@@ -155,31 +153,17 @@ class GA:
         for i in range(n):
             result.append(idxwf[i][0])
         return result
-
-
-
-
-
-
-
-
-
-
-
-
+    
 losses = []
-parser = argparse.ArgumentParser(description='Input the data_dir and the seed_num')
-parser.add_argument('-dataset',type=str, choices=['OF17', 'IN100', 'FOOD101'],default='OF17')
-parser.add_argument('-data_dir', type=str)
 
-args = parser.parse_args()
-data_dir = args.data_dir
-savedStdout = sys.stdout  
+data_dir = os.getcwd()
+data_dir = "./IN100/FEW/"
+savedStdout = sys.stdout  #保存标准输出流
 
 data_transforms = {
     'train': transforms.Compose([
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
@@ -207,7 +191,7 @@ inverse_transform = transforms.Compose([
 if 1:
     start=time.time()
     image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'test']}
-    dataloaders = {x: DataLoader(image_datasets[x], batch_size=32, shuffle=True, num_workers=4) for x in ['train', 'test']}
+    dataloaders = {x: DataLoader(image_datasets[x], batch_size=4, shuffle=True, num_workers=4) for x in ['train', 'test']}
     dataloaders['train'] = DataLoader(image_datasets['train'], batch_size=32, num_workers=4)
     dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'test']}
 
@@ -216,7 +200,7 @@ if 1:
     cls2idx=image_datasets['train'].class_to_idx
     idx2cls={j:i for i,j in cls2idx.items()}
     
-    output_dir=os.path.join(os.getcwd(),args.dataset)
+    output_dir=os.path.join("./IN100/FEW/","SENSEIAdd")
     os.makedirs(output_dir,exist_ok=True)
     for i in image_datasets['train'].classes:
         os.makedirs(os.path.join(output_dir,i),exist_ok=True)
@@ -246,7 +230,7 @@ if 1:
     org_rang=list(range(dataset_sizes['train']))
     rang=list(range(dataset_sizes['train']))
     pos_dict=dict(zip(org_rang,rang))
-    epochs=25
+    epochs=20
     img_transformer=transforms.ToPILImage()
     ts_transformer=transforms.ToTensor()
     out_cnt={i:0 for i in range(num_classes)}
@@ -304,7 +288,7 @@ if 1:
                     pops[pos]=ExGA.select(children,fitness)
                 best_g[pos]=children[ExGA.selectBest(children, fitness)]
                 out_cls_dir=os.path.join(output_dir,idx2cls[int(imgClass.item())])
-                sel_idx=ExGA.selectBest_n(children, fitness, 10)
+                sel_idx=ExGA.selectBest_n(children, fitness, 5)
                 for i in sel_idx:
                     newimg[i].save(os.path.join(out_cls_dir, str(epoch)+"_"+str(out_cnt[int(imgClass.item())])+".jpg"))
                     out_cnt[int(imgClass.item())]+=1
@@ -319,12 +303,9 @@ if 1:
             running_loss += loss.item()
 
         print(f'Epoch {epoch+1}, Loss: {running_loss / dataset_sizes["train"]:.4f}')
-        end=time.time()
-        print(end-start)
         losses.append(running_loss / dataset_sizes["train"])
         
     for key in cnt_dict.keys():
         cnt_dict[key]/=epochs
     end=time.time()
     print("\n\n\ntiming: ",end-start)
-    

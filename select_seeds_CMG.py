@@ -11,8 +11,8 @@ parser.add_argument('-seed_num', type=int, default=100)
 args = parser.parse_args()
 
 parent_dir=os.getcwd()
-output_dir=os.path.join(parent_dir,'seeds_jpg')
-output_dir=os.path.join(output_dir,args.dataset)
+output_dir=os.path.join(parent_dir,'./data/seed')
+# output_dir=os.path.join(output_dir,args.dataset)
 input_dir=args.data_dir
 
 if not os.path.isdir(input_dir):

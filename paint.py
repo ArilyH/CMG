@@ -5,12 +5,10 @@ from sklearn import manifold
 from PIL import Image
 from matplotlib.lines import Line2D
 
-# 定义文件夹和颜色
 lb= ["CMGFuzz", "SENSEI", "DistXplore","Train", "Full"]
 folders = ["CMGFuzz", "SENSEI", "DistXplore", "train",  'real']
 colors = ['#D8383A', "#2ECC71", "#3498DB", '#9B59B6', '#95A5A6']
 markers = ['s', '.', 'v', '.', '*']
-# 初始化t-SNE模型
 tsne = manifold.TSNE(n_components=2, init='pca', random_state=501, perplexity=200)
 
 x=0.5
@@ -39,7 +37,6 @@ for kk in range(2):
     X_sample = X[sample_idxs]
     labels_sample = labels[sample_idxs]
 
-    # 使用t-SNE进行降维
     X_tsne = tsne.fit_transform(X_sample)
     if kk==0:
         X0=X_tsne[0]
@@ -58,18 +55,7 @@ for kk in range(2):
         if labels_sample[i]!=0:
             continue
         plt.scatter(X_tsne[i, 0], X_tsne[i, 1], color=colors[labels_sample[i]], s=20,marker=markers[labels_sample[i]])
-# plt.scatter(X0[0], X0[1], s=50, color=colors[labels_sample[0]])
-# plt.scatter(X1[0], X1[1], s=50, color=colors[labels_sample[0]])
-# plt.scatter(X2[0], X2[1], s=50, color=colors[labels_sample[0]])
 
-# print(0)
-# # 使用t-SNE进行降维
-# X_tsne = tsne.fit_transform(X)
-
-
-# plt.figure(figsize=(8, 8))
-# for i in range(X_tsne.shape[0]):
-#     plt.scatter(X_tsne[i, 0], X_tsne[i, 1], color=colors[labels[i]])
 
 legend_elements = [Line2D([0], [0], marker=marker, color='w', label=lbs, 
                           markerfacecolor=color, markersize=10, markeredgewidth=2) for marker, lbs, color in zip(markers[0:1]+markers[3:], lb[0:1]+lb[3:], colors[0:1]+colors[3:])]
