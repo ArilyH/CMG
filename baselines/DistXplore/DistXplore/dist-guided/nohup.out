@@ -1,0 +1,16 @@
+usage: AttackSetRe.py [-h] [-i I] [-o O] [-pop_num POP_NUM]
+                      [-type {mnist,imagenet,cifar,svhn,fmnist}]
+                      [-model_type {lenet1,lenet5,resnet20,mobilenet,vgg16,resnet50}]
+                      [-model MODEL] [-ratio RATIO] [-subtotal SUBTOTAL]
+                      [-timeout TIMEOUT] [-max_iteration MAX_ITERATION]
+                      [-first_attack {0,1}] [-target {-1,0,1,2,3,4,5,6,7,8,9}]
+                      [-mode {pixel,image}] [-logits LOGITS]
+AttackSetRe.py: error: argument -max_iteration: expected one argument
+usage: AttackSetRe.py [-h] [-i I] [-o O] [-pop_num POP_NUM]
+                      [-type {mnist,imagenet,cifar,svhn,fmnist}]
+                      [-model_type {lenet1,lenet5,resnet20,mobilenet,vgg16,resnet50}]
+                      [-model MODEL] [-ratio RATIO] [-subtotal SUBTOTAL]
+                      [-timeout TIMEOUT] [-max_iteration MAX_ITERATION]
+                      [-first_attack {0,1}] [-target {-1,0,1,2,3,4,5,6,7,8,9}]
+                      [-mode {pixel,image}] [-logits LOGITS]
+AttackSetRe.py: error: argument -max_iteration: expected one argument
