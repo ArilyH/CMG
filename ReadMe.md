@@ -2,7 +2,7 @@
 The Code-Demo of CMGFuzz, a novel distribution-aware neural networks fuzz testing framework that adopts AIGC models to convert training and test data into abstract text modal data and then generate more diverse test cases based on text data.
 
 ## Installation
-We have tested CMGFuzz based on Python 3.11 on Ubuntu 20.04, theoretically it should also work on other operating systems. To get the dependencies of DistXplore, it is sufficient to run the following command.
+We have tested CMGFuzz based on Python 3.11 on Ubuntu 20.04, theoretically it should also work on other operating systems. To get the dependencies of CMGFuzz, it is sufficient to run the following command.
 
 ```
 conda env create -f environment.yaml
